@@ -10,3 +10,4 @@ __pycache__/
 .env
 *.egg-info/
 .agentbase/
+CLAUDE.md
