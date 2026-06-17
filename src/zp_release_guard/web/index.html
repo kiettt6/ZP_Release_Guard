@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8">
+  <title>ZLP ReleaseGuard · QA Release Review</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description"
+    content="QA release impact reviewer for ZaloPay. Paste an impact analysis, diff, PRD, or release note to get risk findings and a P0 smoke checklist.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="/app.js" defer></script>
+  <link rel="icon" href="/zalopay.png">
+</head>
+
+<body data-theme="light">
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img class="brand-logo-img" src="/zalopay.png" alt="ZaloPay" width="72" height="54">
+        <div class="brand-text">
+          <div class="brand-title">ZLP ReleaseGuard</div>
+          <div class="brand-subtitle">QE review · ZaloPay</div>
+        </div>
+      </div>
+
+      <button class="new-chat-btn" id="new-chat-btn" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Cuộc trò chuyện mới
+      </button>
+
+      <div class="section">
+        <div class="section-title">Mẫu phân tích nhanh</div>
+        <button class="sample-btn" data-sample="refund" type="button">
+          <span class="sample-emoji">💸</span>
+          <span class="sample-label">
+            <strong>Refund flow</strong>
+            <em>Hoàn tiền · partner timeout</em>
+          </span>
+        </button>
+        <button class="sample-btn" data-sample="promo" type="button">
+          <span class="sample-emoji">🎁</span>
+          <span class="sample-label">
+            <strong>Promo / Cashback</strong>
+            <em>Khuyến mãi · double-grant</em>
+          </span>
+        </button>
+        <button class="sample-btn" data-sample="banklink" type="button">
+          <span class="sample-emoji">🏦</span>
+          <span class="sample-label">
+            <strong>Liên kết ngân hàng</strong>
+            <em>Bank link · OTP · token</em>
+          </span>
+        </button>
+      </div>
+
+      <div class="section tips">
+        <div class="section-title">Mẹo sử dụng</div>
+        <ul>
+          <li>Paste Git diff, PRD, impact doc hoặc release note để phân tích rủi ro</li>
+          <li>Nêu rõ <em>service / luồng / bảng</em> bị ảnh hưởng để phân tích sát hơn</li>
+          <li>Đính kèm ảnh, PDF hoặc DOCX — tự động OCR rồi phân tích</li>
+          <li>Bấm chip <em>"Hỏi tiếp"</em> dưới báo cáo để đào sâu nhanh</li>
+          <li>Hỏi follow-up (VD: <em>"tại sao Critical?"</em>) để được giải thích cụ thể</li>
+          <li>Dùng <em>Copy</em> hoặc <em>Tải .md</em> để dán báo cáo vào Jira / Merge Request</li>
+          <li>Hỗ trợ tiếng Việt và English — tự nhận diện</li>
+          <li>Secrets (token, API key…) được tự động ẩn trước khi phân tích</li>
+        </ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <button class="ghost-btn" id="theme-toggle" type="button" title="Đổi giao diện sáng/tối">
+          <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4" />
+            <path
+              d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+          <span class="theme-label">Giao diện</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main chat -->
+    <main class="chat">
+      <header class="chat-header">
+        <button class="ghost-btn icon-only mobile-only" id="sidebar-toggle" type="button" aria-label="Mở menu">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div class="chat-title">
+          <h1>QA Release Review</h1>
+          <p class="chat-subtitle">Phân tích risk · Impact analysis · Smoke checklist · Hỏi đáp follow-up</p>
+        </div>
+        <div class="chat-actions">
+          <span class="badge-soft" id="connection-status" title="API status" role="status" aria-live="polite">
+            <span class="dot"></span>
+            Sẵn sàng
+          </span>
+        </div>
+      </header>
+
+      <div class="messages-wrapper">
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions"
+          aria-label="Hội thoại">
+          <!-- welcome card injected by JS -->
+        </div>
+        <button class="scroll-bottom-btn" id="scroll-bottom-btn" type="button" hidden aria-label="Cuộn xuống cuối">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <polyline points="19 12 12 19 5 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form class="composer" id="composer" autocomplete="off">
+        <div class="reply-bar" id="reply-bar" hidden>
+          <span class="reply-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 17 4 12 9 7" />
+              <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+            </svg>
+          </span>
+          <div class="reply-body">
+            <div class="reply-title">Đang trả lời tin nhắn của trợ lý</div>
+            <div class="reply-snippet" id="reply-snippet"></div>
+          </div>
+          <button type="button" class="reply-cancel" id="reply-cancel" aria-label="Huỷ trả lời">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="attachment-bar" id="attachment-bar" hidden></div>
+        <div class="label-bar" id="label-bar" hidden>
+          <span class="label-chip" id="label-chip"></span>
+          <button type="button" class="label-cancel" id="label-cancel" aria-label="Bỏ nhãn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="composer-inner">
+          <div class="plus-wrap">
+            <button type="button" id="plus-btn" class="composer-btn" title="Gắn nhãn loại yêu cầu"
+              aria-label="Gắn nhãn yêu cầu" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+            <div class="plus-menu" id="plus-menu" role="menu" hidden>
+              <div class="plus-head">Loại yêu cầu cho trợ lý</div>
+              <button type="button" class="plus-item" role="menuitem" data-label="impact">
+                <span class="plus-ic">📋</span> Phân tích Impact Analysis
+              </button>
+              <button type="button" class="plus-item" role="menuitem" data-label="diff">
+                <span class="plus-ic">🔀</span> Review Git diff
+              </button>
+              <button type="button" class="plus-item" role="menuitem" data-label="prd">
+                <span class="plus-ic">📄</span> Review PRD
+              </button>
+              <button type="button" class="plus-item" role="menuitem" data-label="release">
+                <span class="plus-ic">📝</span> Review Release Note
+              </button>
+              <button type="button" class="plus-item" role="menuitem" data-label="bugfix">
+                <span class="plus-ic">🐞</span> Bug fix / RCA
+              </button>
+              <button type="button" class="plus-item" role="menuitem" data-label="security">
+                <span class="plus-ic">🔒</span> Security review
+              </button>
+              <button type="button" class="plus-item" role="menuitem" data-label="p0">
+                <span class="plus-ic">✅</span> Tạo P0 smoke checklist
+              </button>
+            </div>
+          </div>
+          <button type="button" id="attach-btn" class="composer-btn"
+            title="Đính kèm tối đa 5 ảnh / PDF / DOCX / text (≤ 10MB/file, 20MB tổng)" aria-label="Đính kèm file">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
+          <input type="file" id="file-input" hidden multiple
+            accept="image/*,.pdf,.docx,.txt,.md,.json,.py,.diff,.patch,.yml,.yaml,.log,.csv">
+          <textarea id="input" placeholder="Paste impact analysis, diff, PRD, release note… hoặc hỏi follow-up" rows="1"
+            maxlength="50000" aria-label="Tin nhắn"></textarea>
+          <div class="composer-actions">
+            <select id="output-language" class="language-select" title="Ngôn ngữ trả lời" aria-label="Ngôn ngữ trả lời">
+              <option value="default">Default</option>
+              <option value="English">English</option>
+              <option value="Vietnamese">Tiếng Việt</option>
+            </select>
+            <span class="char-count" id="char-count">0</span>
+            <button type="submit" id="send-btn" class="send-btn" title="Gửi (Enter)" disabled>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="composer-hint">
+          Đính kèm tối đa 5 ảnh (OCR tự động), PDF, DOCX hoặc text. Tối đa 10MB/file, 20MB tổng. Secrets sẽ được redact
+          trước khi phân tích.
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div class="confirm-overlay" id="new-chat-modal" hidden>
+    <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="new-chat-title"
+      aria-describedby="new-chat-desc">
+      <div class="confirm-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+          <path d="M9 9h6" />
+          <path d="M9 13h4" />
+        </svg>
+      </div>
+      <div class="confirm-copy">
+        <h2 id="new-chat-title">Bắt đầu cuộc trò chuyện mới?</h2>
+        <p id="new-chat-desc">Toàn bộ tin nhắn hiện tại sẽ bị xoá khỏi trình duyệt này.</p>
+      </div>
+      <div class="confirm-actions">
+        <button class="confirm-btn secondary" id="new-chat-cancel" type="button">Huỷ</button>
+        <button class="confirm-btn primary" id="new-chat-confirm" type="button">Bắt đầu mới</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="sidebar-backdrop"></div>
+</body>
+
+</html>
