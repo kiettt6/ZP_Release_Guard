@@ -2,6 +2,7 @@ import re
 
 from zp_release_guard.language import normalize_vietnamese_text
 from zp_release_guard.models import Finding, RiskLevel
+from zp_release_guard.parser import drop_removed_diff_lines, parse_git_diff
 
 
 CRITICAL_DOMAINS = {
@@ -638,8 +639,71 @@ def score_domain_baseline(domains: list[str]) -> list[Finding]:
     return findings
 
 
+_DIFF_MONEY_FILE_RE = re.compile(
+    r"(ledger|journal|settlement|recon|reconcil|payout|disburs|balance|migration|/schema|schema\.|\.sql$)",
+    re.I,
+)
+# Protections whose removal in a diff is materially risky. Kept narrow to avoid
+# false positives on generic words like "check"/"validate".
+_DIFF_GUARD_TERMS = [
+    "idempotency", "idempotent", "mfa", "kba", "otp", "risk check", "risk_check",
+    "signature", "authentication", "authorize", "authorization", "rate limit",
+    "rate_limit", "captcha", "duplicate check", "double payout guard",
+]
+
+
+def _detect_diff_risks(message: str, text: str) -> list[Finding]:
+    """Risk checks that need the structure of a diff (changed files, +/- lines).
+
+    `text` is the normalized post-change view (removed lines already stripped).
+    """
+    summary = parse_git_diff(message)
+    findings: list[Finding] = []
+
+    sensitive = [path for path in summary.files if _DIFF_MONEY_FILE_RE.search(path)]
+    if sensitive and _has_none(
+        text,
+        ["reconciliation", "recon", "rollback", "revert", "down migration",
+         "backfill", "doi soat", "hoan tac", "khoi phuc"],
+    ):
+        findings.append(
+            Finding(
+                title="Git diff touches money-critical files without reconciliation or rollback coverage.",
+                severity=RiskLevel.CRITICAL,
+                category="Diff scope",
+                rationale="The diff changes ledger/schema/settlement files that affect fund integrity, but the change description states no reconciliation, backfill, or rollback plan for them.",
+                evidence=[f"changed file: {path}" for path in sensitive[:5]],
+            )
+        )
+
+    removed_blob = normalize_vietnamese_text(" ".join(summary.removed_lines).lower())
+    added_blob = normalize_vietnamese_text(" ".join(summary.added_lines).lower())
+    removed_guards = [
+        term for term in _DIFF_GUARD_TERMS
+        if normalize_vietnamese_text(term) in removed_blob
+        and normalize_vietnamese_text(term) not in added_blob
+    ]
+    if removed_guards:
+        findings.append(
+            Finding(
+                title="Git diff removes a protection (idempotency, auth, or risk gate) without a visible replacement.",
+                severity=RiskLevel.CRITICAL,
+                category="Diff scope",
+                rationale="A guard present on removed lines does not appear on added lines, so the diff weakens a control protecting fund-out or account access. Confirm an equivalent control remains and add a regression test.",
+                evidence=[f"removed: {term}" for term in removed_guards[:5]],
+            )
+        )
+
+    return findings
+
+
 def detect_risks(message: str, domains: list[str], detected_input_types: list[str]) -> list[Finding]:
-    text = normalize_vietnamese_text(message.lower())
+    is_diff = "git_diff" in detected_input_types
+    # For diffs, match keyword rules on the post-change view only: a guard keyword
+    # (idempotency, mfa, ...) that exists solely on a removed line must not read as
+    # 'still present' and suppress its finding.
+    scan_source = drop_removed_diff_lines(message) if is_diff else message
+    text = normalize_vietnamese_text(scan_source.lower())
     findings = score_domain_baseline(domains)
 
     for rule in RISK_RULES:
@@ -672,6 +736,9 @@ def detect_risks(message: str, domains: list[str], detected_input_types: list[st
                     rationale="Impact text narrows scope to refund, but diff indicates ledger/schema/settlement surface that needs reconciliation and rollback testing.",
                 )
             )
+
+    if is_diff:
+        findings.extend(_detect_diff_risks(message, text))
 
     unique: dict[tuple[str, str], Finding] = {}
     for finding in findings:

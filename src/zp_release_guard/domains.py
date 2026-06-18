@@ -41,6 +41,15 @@ DOMAIN_KEYWORDS: dict[str, list[str]] = {
 
 def detect_domains(message: str) -> list[str]:
     lowered = normalize_vietnamese_text(message.lower())
+    # Diff file paths carry strong domain signals (e.g. db/migrations/..._ledger_...sql)
+    # but their / _ . - separators block \bword\b matching. Flatten path segments
+    # into space-separated tokens so keywords like "ledger"/"refund" match.
+    path_tokens = " ".join(
+        re.sub(r"[\\/_.\-]", " ", match.group(1))
+        for match in re.finditer(r"(?m)^diff --git a/\S+ b/(\S+)", message)
+    )
+    if path_tokens:
+        lowered = lowered + "\n" + normalize_vietnamese_text(path_tokens.lower())
     domains: list[str] = []
     for domain, keywords in DOMAIN_KEYWORDS.items():
         if any(re.search(rf"\b{re.escape(keyword)}\b", lowered) for keyword in keywords):

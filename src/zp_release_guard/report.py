@@ -107,6 +107,8 @@ FINDING_TRANSLATIONS = {
     "Backend decision-flow enum change without client mapping test and default case.": "Đổi enum decision-flow backend mà không có test mapping client và default case.",
     "CE/out-app ticket creation change lacks pending-ticket duplicate check.": "Thay đổi tạo ticket CE/out-app thiếu bước check ticket pending để chống trùng.",
     "An authentication or risk gate is being removed or weakened.": "Một gate xác thực hoặc risk đang bị gỡ bỏ hoặc làm yếu.",
+    "Git diff touches money-critical files without reconciliation or rollback coverage.": "Git diff đụng vào file ảnh hưởng tiền mà không có coverage reconciliation hoặc rollback.",
+    "Git diff removes a protection (idempotency, auth, or risk gate) without a visible replacement.": "Git diff gỡ bỏ một lớp bảo vệ (idempotency, auth hoặc risk gate) mà không thấy thay thế.",
 }
 
 RATIONALE_TRANSLATIONS = {
@@ -139,6 +141,8 @@ RATIONALE_TRANSLATIONS = {
     "Backend decision-flow enums (e.g. DF_TYPE_NFC_VERIFICATION with reasons NFC_PROCESSING/NEW_USER/FUND_OUT_LIMIT/BLACKLIST) drive client UI routing at fund-out time. New or renumbered values without a client default case misroute users.": "Enum decision-flow của backend (vd DF_TYPE_NFC_VERIFICATION với reason NFC_PROCESSING/NEW_USER/FUND_OUT_LIMIT/BLACKLIST) điều khiển trực tiếp điều hướng UI client tại thời điểm fund-out. Thêm hoặc đánh số lại enum mà client không có default case sẽ điều hướng sai user.",
     "The app previously created duplicate CE support tickets because it never pre-checked pending tickets. Ticket-creation flows must search by the same request_type and pending-group statuses before creating a new one.": "App từng tạo trùng ticket hỗ trợ CE vì không pre-check ticket pending. Luồng tạo ticket phải search theo cùng request_type và nhóm status pending trước khi tạo mới.",
     "The release explicitly removes or weakens an authentication/risk gate (KBA, OTP, MFA, face authen, risk check) in a flow that protects account access or fund-out. This requires an explicit security review and a documented compensating control.": "Release này gỡ bỏ hoặc làm yếu một gate xác thực/risk (KBA, OTP, MFA, face authen, risk check) trong luồng bảo vệ tài khoản hoặc fund-out. Bắt buộc phải có security review và compensating control được document rõ.",
+    "The diff changes ledger/schema/settlement files that affect fund integrity, but the change description states no reconciliation, backfill, or rollback plan for them.": "Diff thay đổi các file ledger/schema/settlement ảnh hưởng tính toàn vẹn của tiền, nhưng mô tả thay đổi không nêu plan reconciliation, backfill hoặc rollback cho chúng.",
+    "A guard present on removed lines does not appear on added lines, so the diff weakens a control protecting fund-out or account access. Confirm an equivalent control remains and add a regression test.": "Một guard xuất hiện ở dòng bị xóa nhưng không có ở dòng thêm vào, nên diff làm yếu một control bảo vệ fund-out hoặc account access. Cần confirm vẫn còn control tương đương và bổ sung regression test.",
 }
 
 CHECK_TRANSLATIONS = {
