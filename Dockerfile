@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src ./src
-COPY main.py README.md demo_script.md ./
+COPY main.py README.md ./
 
 ENV PYTHONPATH=/app/src
 EXPOSE 8080
